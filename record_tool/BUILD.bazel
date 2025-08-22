@@ -1,0 +1,11 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
+cc_binary(
+    name = "record_mcap",
+    srcs = ["record_mcap.cc"],
+    deps = [
+        "//recorder:mcap_recorder",
+        "//plugin:api",
+    ],
+    linkopts = ["-ldl", "-lzstd", "-llz4"],   
+)

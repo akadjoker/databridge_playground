@@ -1,0 +1,48 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_binary", "cc_test")
+
+# API header
+cc_library(
+    name = "api",
+    hdrs = ["api.h"],
+    visibility = ["//visibility:public"],
+)
+
+# Plugin library (para testes)
+cc_library(
+    name = "fake_plugin_lib",
+    srcs = ["fake_plugin.cc"],
+    hdrs = ["fake_plugin.h"],
+    deps = [
+        ":api",
+        "//proto:demo_cc_proto",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# Plugin shared library
+cc_binary(
+    name = "libfake_plugin_so.so",
+    srcs = [
+        "fake_plugin.cc",
+        "fake_plugin.h",
+    ],
+    linkshared = True,
+    linkstatic = False,
+    deps = [
+        ":api",
+        "//proto:demo_cc_proto",
+    ],
+        visibility = ["//visibility:public"],
+)
+
+# Testes
+# cc_test(
+#     name = "fake_plugin_test",
+#     srcs = ["fake_plugin_test.cc"],
+#     deps = [
+#         ":fake_plugin_lib",
+#         "//proto:demo_cc_proto",
+#         "@googletest//:gtest_main",
+#     ],
+# )
+

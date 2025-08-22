@@ -1,0 +1,21 @@
+# Aliases para facilitar acesso aos principais targets
+alias(
+    name = "host",
+    actual = "//host:main",
+)
+
+alias(
+    name = "plugin",
+    actual = "//plugin:libfake_plugin_so.so",
+)
+
+alias(
+    name = "test",
+    actual = "//plugin:fake_plugin_test",
+)
+
+
+alias(
+    name   = "record_mcap",
+    actual = "//record_tool:record_mcap",
+)

@@ -1,0 +1,10 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+cc_library(
+    name = "mcap_recorder",
+    srcs = ["recorder.cc"],
+    hdrs = ["recorder.h"],
+    #includes = ["//third_party/mcap/include"],  # ← headers locais apenas não funciona :(
+    deps = ["//plugin:api"],
+    visibility = ["//visibility:public"],
+)

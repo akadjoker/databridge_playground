@@ -1,0 +1,10 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
+cc_binary(
+    name = "main",
+    srcs = ["main.cc"],
+    linkopts = ["-ldl"],  # para dlopen/dlsym
+    deps = ["//plugin:api"],
+    visibility = ["//visibility:public"],
+)
+
