@@ -1,0 +1,107 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build-and-test:
+    name: Build, Test & Record
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libzstd-dev liblz4-dev
+
+    - name: Set up Bazelisk
+      uses: bazelbuild/setup-bazelisk@v2
+      with:
+        bazelisk-cache: true
+        disk-cache: ${{ github.workflow }}
+        repository-cache: true
+
+    - name: Build All Targets
+      run: |
+        bazelisk build //...
+        echo "✅ Build completed successfully"
+
+    - name: Run Unit Tests
+      run: |
+        bazelisk test //... --test_output=errors
+        echo "✅ All tests passed"
+
+    - name: Build Plugin and Recorder
+      run: |
+        bazelisk build //plugin:libfake_plugin_so.so //record_tool:record_mcap
+        echo "✅ Plugin and recorder built"
+
+    - name: Test Plugin System
+      run: |
+        echo "Testing plugin system..."
+        bazelisk run //host:main -- $(bazelisk info bazel-bin)/plugin/libfake_plugin_so.so
+        echo "✅ Plugin system test passed"
+
+    - name: Generate MCAP Recording
+      run: |
+        echo "Generating MCAP recording..."
+        bazelisk run //record_tool:record_mcap -- \
+          $(bazelisk info bazel-bin)/plugin/libfake_plugin_so.so \
+          ci_recording.mcap
+        echo "✅ MCAP recording generated"
+
+    - name: Validate MCAP File
+      run: |
+        # Install MCAP CLI for validation
+        pip install mcap-cli
+        
+        # Validate the generated MCAP file
+        mcap validate ci_recording.mcap
+        mcap info ci_recording.mcap
+        echo "✅ MCAP file validated successfully"
+
+    - name: Upload MCAP Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: mcap-recording-${{ github.sha }}
+        path: ci_recording.mcap
+        retention-days: 30
+
+  multi-platform-test:
+    name: Multi-Platform Build Test
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-20.04]
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libzstd-dev liblz4-dev
+
+    - name: Set up Bazelisk
+      uses: bazelbuild/setup-bazelisk@v2
+
+    - name: Build Core Components
+      run: |
+        bazelisk build //plugin:libfake_plugin_so.so //host:main
+        echo "✅ Core components built on ${{ matrix.os }}"
+
+    - name: Quick Test
+      run: |
+        bazelisk test //plugin:fake_plugin_test
+        echo "✅ Quick test passed on ${{ matrix.os }}"
+
