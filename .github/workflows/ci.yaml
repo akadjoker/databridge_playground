@@ -70,7 +70,7 @@ jobs:
         echo "✅ MCAP file validated successfully"
 
     - name: Upload MCAP Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: mcap-recording-${{ github.sha }}
         path: ci_recording.mcap
