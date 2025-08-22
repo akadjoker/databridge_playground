@@ -444,9 +444,7 @@ mcap list test.mcap
 
 ***
 
-## License
 
-[Specify your license here]
 
 ***
 
