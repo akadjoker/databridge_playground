@@ -3,6 +3,10 @@
 
 A modular C++-20 plugin system that demonstrates dynamic loading, Protocol Buffers serialization, MCAP data recording, and unit testing with Google Test, all built and managed by Bazel 8 (Bzlmod).
 
+[![CI Pipeline](https://github.com/akadjoker/databridge_playground/actions/workflows/ci.yaml/badge.svg)](https://github.com/akadjoker/databridge_playground/actions/workflows/ci.yaml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Bazel](https://img.shields.io/badge/build-Bazel-green.svg)](https://bazel.build/)
+
 ***
 
 ## Contents
