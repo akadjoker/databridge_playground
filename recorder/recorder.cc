@@ -5,7 +5,8 @@
 #include <chrono>
 #include <stdexcept>
 #include <iostream>
- 
+ #include <vector>
+
 McapRecorder::McapRecorder(const std::string& path) {
     auto options = mcap::McapWriterOptions("");   
     options.compression = mcap::Compression::None;
@@ -55,7 +56,7 @@ void McapRecorder::write(const std::string& topic,
     msg.data = reinterpret_cast<const std::byte*>(payload.data());
     msg.dataSize = payload.size();
     
-    auto res = writer_.write(msg);  // ← verificar resultado
+    auto res = writer_.write(msg);  //  verificar resultado
     if (!res.ok()) {
         std::cerr << "Failed to write message: " << res.message << std::endl;
     }

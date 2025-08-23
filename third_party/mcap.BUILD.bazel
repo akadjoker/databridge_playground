@@ -1,8 +1,0 @@
-cc_library(
-    name = "mcap_cpp",
-    hdrs = glob(["include/mcap/**/*.h", "include/mcap/**/*.hpp"]),
-    srcs = glob(["src/**/*.cpp"]),
-    includes = ["include"],
-    strip_include_prefix = "include",
-    visibility = ["//visibility:public"],
-)

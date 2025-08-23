@@ -4,7 +4,7 @@
 
 using namespace std;
 
-bool FakeConverter::Convert(span<const std::byte> /*raw*/, vector<std::byte>& out) {
+bool FakeConverter::Convert(const std::vector<std::byte>& /*raw*/, vector<std::byte>& out) {
   demo::DemoMessage msg;
   msg.set_counter(42);
   msg.set_text("hello");

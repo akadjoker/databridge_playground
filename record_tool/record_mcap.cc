@@ -7,6 +7,7 @@
 #include <chrono>
 #include <iostream>
 #include <vector>
+ #include <sstream>
 
 static uint64_t now_ns() {
     using namespace std::chrono;
@@ -18,7 +19,8 @@ struct HostCtx : IPluginContext {
     void LogInfo(const char* msg) override { std::cerr << "[plugin] " << msg << '\n'; }
     
 
-    void Publish(const std::string& topic, const void* data, size_t size) override {
+    void Publish(const std::string& topic, const void* data, size_t size) override 
+    {
     // JSON estruturado com schema Foxglove Log
     std::ostringstream json;
     json << "{"
@@ -43,28 +45,6 @@ struct HostCtx : IPluginContext {
               })");
 }
 
-    // void Publish(const std::string& topic,
-    //              const void* data, size_t size) override 
-    // {
-    
-    //   std::cout << "Publishing " << size << " bytes:" << std::endl;
-    // const uint8_t* bytes = static_cast<const uint8_t*>(data);
-    // for (size_t i = 0; i < std::min(size, size_t(32)); ++i) {
-    //     printf("%02x ", bytes[i]);
-    //     if ((i + 1) % 16 == 0) std::cout << std::endl;
-    // }
-    // if (size > 32) std::cout << "...";
-    // std::cout << std::endl;
-    
-    // // Tentar interpretar como string
-    // std::cout << "As string: " << std::string(static_cast<const char*>(data), size) << std::endl;
-    
-    //   recorder.write(topic,
-    //                    now_ns(),
-    //                    {static_cast<const char*>(data), size},
-    //                    "demo.DemoMessage",
-    //                    R"(syntax = "proto3"; package demo; message DemoMessage { int32 counter = 1; string text = 2; })");
-    // }
 
     McapRecorder& recorder;
 };
@@ -98,7 +78,8 @@ int main(int argc, char** argv) {
 
       
         std::vector<std::byte> out;
-        convs.front()->Convert({}, out);                         // vazio  mensagem demo
+        std::vector<std::byte> din;
+        convs.front()->Convert(din, out);                         // vazio  mensagem demo
         ctx.Publish(convs.front()->Topic(), out.data(), out.size());
 
         destroy(p);

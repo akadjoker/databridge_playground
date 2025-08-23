@@ -15,7 +15,7 @@ struct IConverter {
   virtual ~IConverter() = default;
   virtual uint64_t GetMessageId() const = 0;
   virtual std::string Topic() const = 0;
-  virtual bool Convert(std::span<const std::byte> raw, std::vector<std::byte>& out) = 0;
+  virtual bool Convert(const std::vector<std::byte> &raw, std::vector<std::byte>& out) = 0;
   virtual std::string GetSchema() const = 0;
 };
 

@@ -1,12 +1,13 @@
 #pragma once
 #include "plugin/api.h"
 #include <memory>
+#include <vector>
 
 class FakeConverter final : public IConverter {
  public:
   uint64_t GetMessageId() const override { return 0xDEADBEEF; }
   std::string Topic() const override { return "/demo/topic"; }
-  bool Convert(std::span<const std::byte> raw, std::vector<std::byte>& out) override;
+  bool Convert(const std::vector<std::byte> &raw, std::vector<std::byte>& out) override;
   std::string GetSchema() const override;
 };
 

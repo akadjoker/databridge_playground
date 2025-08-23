@@ -5,6 +5,8 @@ cc_library(
     srcs = ["recorder.cc"],
     hdrs = ["recorder.h"],
     #includes = ["//third_party/mcap/include"],  # ← headers locais apenas não funciona :(
-    deps = ["//plugin:api"],
+    deps = ["//plugin:api",
+        "//third_party/mcap:mcap",   
+    ],
     visibility = ["//visibility:public"],
 )

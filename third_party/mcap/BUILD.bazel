@@ -1,0 +1,11 @@
+
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "mcap",
+    hdrs = glob([
+        "mcap/**/*.hpp",
+        "mcap/**/*.inl",
+    ]),
+    includes = ["."],   # permite #include <glm/glm.hpp>
+)
