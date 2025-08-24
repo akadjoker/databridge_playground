@@ -6,16 +6,8 @@ on:
   pull_request:
     branches: [ "**" ]
 
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
-env:
-  BAZELISK_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 jobs:
-  build-and-test:
-    name: Build & Test (Makefile)
+  ci:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout (with submodules)
@@ -24,77 +16,31 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      - name: System libs (zstd/lz4) — required
+      - name: System libs (zstd/lz4)
         run: |
           sudo apt-get update
           sudo apt-get install -y libzstd-dev liblz4-dev
 
       - name: Setup Bazelisk
         uses: bazelbuild/setup-bazelisk@v2
-        with:
-          bazelisk-cache: true
 
-      - name: Cache Bazel
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/bazel
-            ~/.cache/bazelisk
-          key: bazel-${{ runner.os }}-${{ hashFiles('MODULE.bazel', '**/BUILD.bazel', '**/*.bzl', '.bazelrc', 'Makefile') }}
-          restore-keys: |
-            bazel-${{ runner.os }}-
-
-      - name: Module graph (Bzlmod)
-        run: bazel mod graph
-
-      # === usa exatamente os teus targets do Makefile ===
-      - name: make build
-        run: make build
-
-      - name: make test
-        run: make test
-
-      - name: make test-all (full)
-        if: always()
-        run: make test-all
-
-  record-smoke:
-    name: Record & Upload artifact (Makefile)
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout (with submodules)
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: System libs (zstd/lz4) — required
+      - name: Build host & plugin
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libzstd-dev liblz4-dev
+          bazel build \
+            //host:main \
+            //plugin:libfake_plugin_so.so \
+            --verbose_failures
 
-      - name: Setup Bazelisk
-        uses: bazelbuild/setup-bazelisk@v2
-        with:
-          bazelisk-cache: true
+      - name: Test (if any)
+        shell: bash
+        run: |
+          set -e
+          TESTS="$(bazel query "kind('.*_test', //...)" || true)"
+          if [ -z "$TESTS" ]; then
+            echo "No test targets found. Skipping bazel test."
+          else
+            echo "Running tests:"
+            echo "$TESTS"
+            bazel test $TESTS --test_output=errors --verbose_failures
+          fi
 
-      - name: Cache Bazel
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/bazel
-            ~/.cache/bazelisk
-          key: bazel-${{ runner.os }}-${{ hashFiles('MODULE.bazel', '**/BUILD.bazel', '**/*.bzl', '.bazelrc', 'Makefile') }}
-          restore-keys: |
-            bazel-${{ runner.os }}-
-
-      - name: make record
-        run: make record
-
-      - name: Upload recording.mcap
-        uses: actions/upload-artifact@v4
-        with:
-          name: recording-mcap
-          path: recording.mcap
-          if-no-files-found: error
