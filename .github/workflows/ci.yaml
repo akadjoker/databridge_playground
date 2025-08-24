@@ -21,8 +21,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libzstd-dev liblz4-dev
 
-      - name: Setup Bazelisk
-        uses: bazelbuild/setup-bazelisk@v2
+      - name: Install Bazelisk (no cache workaround)
+        run: |
+          BZLISK_VERSION=1.27.0
+          curl -sSL -o bazelisk "https://github.com/bazelbuild/bazelisk/releases/download/v${BZLISK_VERSION}/bazelisk-linux-amd64"
+          sudo install -m 0755 bazelisk /usr/local/bin/bazel
+          bazel version
 
       - name: Build host & plugin
         run: |
@@ -31,7 +35,7 @@ jobs:
             //plugin:libfake_plugin_so.so \
             --verbose_failures
 
-      - name: Test (if any)
+      - name: Test (auto-discover)
         shell: bash
         run: |
           set -e
