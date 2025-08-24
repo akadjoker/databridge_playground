@@ -1,104 +1,100 @@
-name: CI Pipeline (Bazel targets)
+name: CI
 
 on:
   push:
-    branches: ['**']        # temporário: ouve todas as branches
+    branches: [ main, master ]
   pull_request:
-    branches: [main, develop]
-  workflow_dispatch: {}      # permite "Run workflow" no UI
+    branches: [ "**" ]
 
-permissions:
-  contents: read
-  actions: write
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BAZELISK_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
-  build-test-run-record:
-    name: Build, Test, Run & Record
+  build-and-test:
+    name: Build & Test (Makefile)
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
+      - name: Checkout (with submodules)
         uses: actions/checkout@v4
         with:
+          submodules: recursive
           fetch-depth: 0
-          submodules: recursive
 
-      - name: Install system dependencies (lz4/zstd, pip)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libzstd-dev liblz4-dev python3-pip
-
-      - name: Set up Bazel (with caches)
-        uses: bazel-contrib/setup-bazel@0.15.0
-        with:
-          bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}
-          repository-cache: true
-
-      - name: Build host + plugin
-        run: |
-          bazelisk build //host:main //plugin:libfake_plugin_so.so
-          echo "✅ build host+plugin"
-
-      - name: Build proto (do teu alvo proto)
-        run: |
-          bazelisk build //proto:demo_cc_proto
-          echo "✅ build proto"
-
-      - name: Build recorder tool
-        run: |
-          bazelisk build //record_tool:record_mcap
-          echo "✅ build record_tool:record_mcap"
-
-
-      - name: Plugin unit tests
-        run: |
-          bazelisk test //plugin:fake_plugin_test --test_output=errors
-          echo "✅ plugin tests"
-
-      - name: All tests (equivalente a test-all)
-        run: |
-          bazelisk test //... --test_output=errors
-          echo "✅ all tests"
-
-      - name: Smoke: run host with plugin
-        run: |
-          bazelisk run //host:main -- $(bazelisk info bazel-bin)/plugin/libfake_plugin_so.so
-          echo "✅ host run with plugin"
-
-   
-
-  multi-platform:
-    name: Multi-platform smoke
-    strategy:
-      matrix:
-        os: [ubuntu-latest, ubuntu-20.04]
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Install system dependencies
+      - name: System libs (zstd/lz4) — required
         run: |
           sudo apt-get update
           sudo apt-get install -y libzstd-dev liblz4-dev
 
-      - name: Set up Bazel (with caches)
-        uses: bazel-contrib/setup-bazel@0.15.0
+      - name: Setup Bazelisk
+        uses: bazelbuild/setup-bazelisk@v2
         with:
           bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}
-          repository-cache: true
 
-      - name: Build host + plugin (targets explícitos)
-        run: |
-          bazelisk build //host:main //plugin:libfake_plugin_so.so
-          echo "✅ build ${{ matrix.os }}"
+      - name: Cache Bazel
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/bazel
+            ~/.cache/bazelisk
+          key: bazel-${{ runner.os }}-${{ hashFiles('MODULE.bazel', '**/BUILD.bazel', '**/*.bzl', '.bazelrc', 'Makefile') }}
+          restore-keys: |
+            bazel-${{ runner.os }}-
 
-      - name: Quick plugin test  
+      - name: Module graph (Bzlmod)
+        run: bazel mod graph
+
+      # === usa exatamente os teus targets do Makefile ===
+      - name: make build
+        run: make build
+
+      - name: make test
+        run: make test
+
+      - name: make test-all (full)
+        if: always()
+        run: make test-all
+
+  record-smoke:
+    name: Record & Upload artifact (Makefile)
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: System libs (zstd/lz4) — required
         run: |
-          bazelisk test //plugin:fake_plugin_test --test_output=errors
-          echo "✅ tests ${{ matrix.os }}"
+          sudo apt-get update
+          sudo apt-get install -y libzstd-dev liblz4-dev
+
+      - name: Setup Bazelisk
+        uses: bazelbuild/setup-bazelisk@v2
+        with:
+          bazelisk-cache: true
+
+      - name: Cache Bazel
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/bazel
+            ~/.cache/bazelisk
+          key: bazel-${{ runner.os }}-${{ hashFiles('MODULE.bazel', '**/BUILD.bazel', '**/*.bzl', '.bazelrc', 'Makefile') }}
+          restore-keys: |
+            bazel-${{ runner.os }}-
+
+      - name: make record
+        run: make record
+
+      - name: Upload recording.mcap
+        uses: actions/upload-artifact@v4
+        with:
+          name: recording-mcap
+          path: recording.mcap
+          if-no-files-found: error
