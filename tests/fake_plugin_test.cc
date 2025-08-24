@@ -2,10 +2,12 @@
 #include "plugin/fake_plugin.h"
 #include "proto/demo.pb.h"
 
+
 TEST(FakePlugin, ConvertProducesValidProto) {
   FakeConverter c;
+  
   std::vector<std::byte> out;
-  std::span<const std::byte> in{};
+  const std::vector<std::byte> in{};
 
   ASSERT_TRUE(c.Convert(in, out));
 
