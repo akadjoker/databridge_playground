@@ -6,11 +6,16 @@ on:
   pull_request:
     branches: [main, develop]
 
+# Permissões necessárias para usar o serviço de cache
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   build-and-test:
     name: Build, Test & Record
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -23,12 +28,15 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libzstd-dev liblz4-dev
 
-    - name: Set up Bazelisk
-      uses: bazelbuild/setup-bazelisk@v2
+    # Substitui setup-bazelisk -> setup-bazel (com caches)
+    - name: Set up Bazel (with caches)
+      uses: bazel-contrib/setup-bazel@0.15.0
       with:
         bazelisk-cache: true
         disk-cache: ${{ github.workflow }}
         repository-cache: true
+        # opcional:
+        # external-cache: true
 
     - name: Build All Targets
       run: |
@@ -81,7 +89,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, ubuntu-20.04]
     runs-on: ${{ matrix.os }}
-    
+
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -91,8 +99,12 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libzstd-dev liblz4-dev
 
-    - name: Set up Bazelisk
-      uses: bazelbuild/setup-bazelisk@v2
+    - name: Set up Bazel (with caches)
+      uses: bazel-contrib/setup-bazel@0.15.0
+      with:
+        bazelisk-cache: true
+        disk-cache: ${{ github.workflow }}
+        repository-cache: true
 
     - name: Build Core Components
       run: |
