@@ -3,7 +3,7 @@
 #include <dlfcn.h>
 #include <vector>
 #include <cstring>
-#include <span>
+
 
 struct HostCtx : IPluginContext {
     void LogInfo(const char* msg) override { 
@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
         
         // Testar conversão
         std::vector<std::byte> output;
-        std::span<const std::byte> input{}; // empty input
+        std::vector<std::byte> input{}; // empty input
         
         std::cout << "Converting..." << std::endl;
         bool success = conv->Convert(input, output);
