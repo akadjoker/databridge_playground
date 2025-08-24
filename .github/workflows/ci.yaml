@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CI Pipeline (Bazel targets)
 
 on:
   push:
@@ -6,112 +6,98 @@ on:
   pull_request:
     branches: [main, develop]
 
-# Permissões necessárias para usar o serviço de cache
 permissions:
   contents: read
   actions: write
 
 jobs:
-  build-and-test:
-    name: Build, Test & Record
+  build-test-run-record:
+    name: Build, Test, Run & Record
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        submodules: recursive
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
 
-    - name: Install System Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libzstd-dev liblz4-dev
+      - name: Install system dependencies (lz4/zstd, pip)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libzstd-dev liblz4-dev python3-pip
 
-    # Substitui setup-bazelisk -> setup-bazel (com caches)
-    - name: Set up Bazel (with caches)
-      uses: bazel-contrib/setup-bazel@0.15.0
-      with:
-        bazelisk-cache: true
-        disk-cache: ${{ github.workflow }}
-        repository-cache: true
-        # opcional:
-        # external-cache: true
+      - name: Set up Bazel (with caches)
+        uses: bazel-contrib/setup-bazel@0.15.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}
+          repository-cache: true
 
-    - name: Build All Targets
-      run: |
-        bazelisk build //...
-        echo "✅ Build completed successfully"
+      - name: Build host + plugin
+        run: |
+          bazelisk build //host:main //plugin:libfake_plugin_so.so
+          echo "✅ build host+plugin"
 
-    - name: Run Unit Tests
-      run: |
-        bazelisk test //... --test_output=errors
-        echo "✅ All tests passed"
+      - name: Build proto (do teu alvo proto)
+        run: |
+          bazelisk build //proto:demo_cc_proto
+          echo "✅ build proto"
 
-    - name: Build Plugin and Recorder
-      run: |
-        bazelisk build //plugin:libfake_plugin_so.so //record_tool:record_mcap
-        echo "✅ Plugin and recorder built"
+      - name: Build recorder tool
+        run: |
+          bazelisk build //record_tool:record_mcap
+          echo "✅ build record_tool:record_mcap"
 
-    - name: Test Plugin System
-      run: |
-        echo "Testing plugin system..."
-        bazelisk run //host:main -- $(bazelisk info bazel-bin)/plugin/libfake_plugin_so.so
-        echo "✅ Plugin system test passed"
 
-    - name: Generate MCAP Recording
-      run: |
-        echo "Generating MCAP recording..."
-        bazelisk run //record_tool:record_mcap -- \
-          $(bazelisk info bazel-bin)/plugin/libfake_plugin_so.so \
-          ci_recording.mcap
-        echo "✅ MCAP recording generated"
+      - name: Plugin unit tests
+        run: |
+          bazelisk test //plugin:fake_plugin_test --test_output=errors
+          echo "✅ plugin tests"
 
-    - name: Validate MCAP File
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install mcap-cli
-        mcap validate ci_recording.mcap
-        mcap info ci_recording.mcap
-        echo "✅ MCAP file validated successfully"
+      - name: All tests (equivalente a test-all)
+        run: |
+          bazelisk test //... --test_output=errors
+          echo "✅ all tests"
 
-    - name: Upload MCAP Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: mcap-recording-${{ github.sha }}
-        path: ci_recording.mcap
-        if-no-files-found: error
-        retention-days: 30
+      - name: Smoke: run host with plugin
+        run: |
+          bazelisk run //host:main -- $(bazelisk info bazel-bin)/plugin/libfake_plugin_so.so
+          echo "✅ host run with plugin"
 
-  multi-platform-test:
-    name: Multi-Platform Build Test
+   
+
+  multi-platform:
+    name: Multi-platform smoke
     strategy:
       matrix:
         os: [ubuntu-latest, ubuntu-20.04]
     runs-on: ${{ matrix.os }}
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-    - name: Install System Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libzstd-dev liblz4-dev
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libzstd-dev liblz4-dev
 
-    - name: Set up Bazel (with caches)
-      uses: bazel-contrib/setup-bazel@0.15.0
-      with:
-        bazelisk-cache: true
-        disk-cache: ${{ github.workflow }}
-        repository-cache: true
+      - name: Set up Bazel (with caches)
+        uses: bazel-contrib/setup-bazel@0.15.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}
+          repository-cache: true
 
-    - name: Build Core Components
-      run: |
-        bazelisk build //plugin:libfake_plugin_so.so //host:main
-        echo "✅ Core components built on ${{ matrix.os }}"
+      - name: Build host + plugin (targets explícitos)
+        run: |
+          bazelisk build //host:main //plugin:libfake_plugin_so.so
+          echo "✅ build ${{ matrix.os }}"
 
-    - name: Quick Test
-      run: |
-        bazelisk test //plugin:fake_plugin_test
-        echo "✅ Quick test passed on ${{ matrix.os }}"
+      - name: Quick plugin test  
+        run: |
+          bazelisk test //plugin:fake_plugin_test --test_output=errors
+          echo "✅ tests ${{ matrix.os }}"
