@@ -61,19 +61,18 @@ jobs:
 
     - name: Validate MCAP File
       run: |
-        # Install MCAP CLI for validation
-        pip install mcap-cli
-        
-        # Validate the generated MCAP file
+        python -m pip install --upgrade pip
+        python -m pip install mcap-cli
         mcap validate ci_recording.mcap
         mcap info ci_recording.mcap
         echo "✅ MCAP file validated successfully"
 
     - name: Upload MCAP Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: mcap-recording-${{ github.sha }}
         path: ci_recording.mcap
+        if-no-files-found: error
         retention-days: 30
 
   multi-platform-test:
@@ -104,4 +103,3 @@ jobs:
       run: |
         bazelisk test //plugin:fake_plugin_test
         echo "✅ Quick test passed on ${{ matrix.os }}"
-
