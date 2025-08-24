@@ -2,9 +2,10 @@ name: CI Pipeline (Bazel targets)
 
 on:
   push:
-    branches: [main, develop]
+    branches: ['**']        # temporário: ouve todas as branches
   pull_request:
     branches: [main, develop]
+  workflow_dispatch: {}      # permite "Run workflow" no UI
 
 permissions:
   contents: read
